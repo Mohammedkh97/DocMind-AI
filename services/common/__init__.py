@@ -1,0 +1,1 @@
+# DocMind AI - Common Services
