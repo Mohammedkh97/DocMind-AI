@@ -74,3 +74,7 @@ class ProcessingMetadata(BaseModel):
         default_factory=list,
         description="Non-fatal warnings during processing"
     )
+    execution_times: dict[str, float] = Field(
+        default_factory=dict,
+        description="Execution time (seconds) for each pipeline stage"
+    )
