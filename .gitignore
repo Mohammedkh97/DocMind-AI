@@ -63,3 +63,7 @@ ade/
 .pytest_cache/
 .coverage
 htmlcov/
+
+# Test assets and scratch files
+assets/
+scratch_test.py
