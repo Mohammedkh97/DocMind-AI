@@ -7,6 +7,10 @@ __pycache__/
 # C extensions
 *.so
 
+# front end
+frontend/node_modules/
+frontend/.vite/
+
 # Distribution / packaging
 bin/
 build/
@@ -38,7 +42,7 @@ scratch_venv/
 # Environment variables (Secrets)
 .env
 .env.local
-.env.*
+
 
 # IDE / Editor configurations
 .vscode/
@@ -73,3 +77,4 @@ backend/venv/
 backend/.env
 backend/assets/
 backend/scratch_test.py
+outputs/
