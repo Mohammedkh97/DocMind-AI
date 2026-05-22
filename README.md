@@ -2,6 +2,33 @@
 
 Hybrid document intelligence system combining VLM (Vision-Language Model) and OCR-based structured extraction with deterministic compliance scoring for logistics document processing and customs compliance automation.
 
+<p align="center">
+  <img src="https://img.shields.io/badge/Python-3.11-3776AB?style=for-the-badge&logo=python&logoColor=white" alt="Python 3.11"/>
+  <img src="https://img.shields.io/badge/FastAPI-0.136-009688?style=for-the-badge&logo=fastapi&logoColor=white" alt="FastAPI"/>
+  <img src="https://img.shields.io/badge/PostgreSQL-15-4169E1?style=for-the-badge&logo=postgresql&logoColor=white" alt="PostgreSQL"/>
+  <img src="https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB" alt="React"/>
+</p>
+
+---
+
+## 📋 Table of Contents
+
+- [Architecture Overview](#architecture-overview)
+- [Tech Stack](#tech-stack)
+- [Quick Start](#quick-start)
+  - [Prerequisites](#prerequisites)
+  - [Local Setup](#local-setup)
+  - [Docker Setup](#docker-setup)
+- [API Endpoints](#api-endpoints)
+  - [POST /extract](#post-extract)
+  - [POST /compliance-score](#post-compliance-score)
+  - [GET /health](#get-health)
+- [Project Structure](#project-structure)
+- [Framework Choice](#framework-choice)
+- [Key Documents](#key-documents)
+
+---
+
 ## Architecture Overview
 
 ```
@@ -17,6 +44,7 @@ PDF Upload → Image Enhancement → VLM Extraction (Gemini 2.5 Flash)
 ```
 
 **Key architectural decisions:**
+
 - **VLM-first extraction**: Gemini 2.5 Flash processes document images directly, understanding layout and tables natively — unlike OCR→LLM pipelines that lose spatial context
 - **Multi-signal confidence**: Each field's confidence combines VLM self-assessment, OCR cross-validation, format validation, and business rule checks
 - **Deterministic compliance**: The model extracts data; pure Python code scores it. Same input = same score, always
@@ -24,19 +52,20 @@ PDF Upload → Image Enhancement → VLM Extraction (Gemini 2.5 Flash)
 
 ## Tech Stack
 
-| Component | Choice | Why |
-|-----------|--------|-----|
-| Backend | FastAPI | Async, Pydantic-native, auto-docs |
-| VLM | Gemini 2.5 Flash | Best cost/accuracy for document vision |
-| OCR | PaddleOCR | Best open-source OCR for degraded scans |
-| Image Processing | OpenCV + PyMuPDF | Robust preprocessing pipeline |
-| Validation | Pydantic v2 | Schema enforcement + serialization |
-| Logging | structlog | Production JSON logging |
-| Retry | tenacity | Exponential backoff for API calls |
+| Component        | Choice           | Why                                     |
+| ---------------- | ---------------- | --------------------------------------- |
+| Backend          | FastAPI          | Async, Pydantic-native, auto-docs       |
+| VLM              | Gemini 2.5 Flash | Best cost/accuracy for document vision  |
+| OCR              | PaddleOCR        | Best open-source OCR for degraded scans |
+| Image Processing | OpenCV + PyMuPDF | Robust preprocessing pipeline           |
+| Validation       | Pydantic v2      | Schema enforcement + serialization      |
+| Logging          | structlog        | Production JSON logging                 |
+| Retry            | tenacity         | Exponential backoff for API calls       |
 
 ## Quick Start
 
 ### Prerequisites
+
 - Python 3.12+
 - Gemini API key ([get one here](https://aistudio.google.com/apikey))
 
@@ -83,6 +112,7 @@ API documentation: `http://localhost:8000/docs`
 Extract structured data from a scanned logistics PDF.
 
 **Request:**
+
 ```bash
 curl -X POST "http://localhost:8000/extract" \
   -H "Content-Type: multipart/form-data" \
@@ -90,6 +120,7 @@ curl -X POST "http://localhost:8000/extract" \
 ```
 
 **Response:**
+
 ```json
 {
   "invoice": {
@@ -108,16 +139,19 @@ curl -X POST "http://localhost:8000/extract" \
     "line_items": [
       {
         "item_no": { "value": 1, "confidence": 0.98 },
-        "description": { "value": "Cotton Woven Fabric (White, 150cm)", "confidence": 0.96 },
+        "description": {
+          "value": "Cotton Woven Fabric (White, 150cm)",
+          "confidence": 0.96
+        },
         "hs_code": { "value": "52081100", "confidence": 0.97 },
         "quantity": { "value": 2400, "confidence": 0.97 },
         "unit": { "value": "MTR", "confidence": 0.98 },
         "unit_price": { "value": 1.85, "confidence": 0.96 },
-        "amount": { "value": 4440.00, "confidence": 0.97 }
+        "amount": { "value": 4440.0, "confidence": 0.97 }
       }
     ],
-    "subtotal": { "value": 13680.00, "confidence": 0.95 },
-    "grand_total": { "value": 13680.00, "confidence": 0.95 }
+    "subtotal": { "value": 13680.0, "confidence": 0.95 },
+    "grand_total": { "value": 13680.0, "confidence": 0.95 }
   },
   "packing_list": {
     "packing_list_number": { "value": "CRG-PL-2024-0087", "confidence": 0.96 },
@@ -144,6 +178,7 @@ curl -X POST "http://localhost:8000/extract" \
 Score extracted data against compliance rules.
 
 **Request:**
+
 ```bash
 curl -X POST "http://localhost:8000/compliance-score" \
   -H "Content-Type: application/json" \
@@ -151,6 +186,7 @@ curl -X POST "http://localhost:8000/compliance-score" \
 ```
 
 **Response:**
+
 ```json
 {
   "score": 62,
@@ -253,6 +289,7 @@ DocMind-AI/
 ## Framework Choice
 
 **FastAPI** over Flask, Django, or Express.js because:
+
 1. **Native Pydantic integration**: The entire response schema is defined in Pydantic models. FastAPI auto-generates OpenAPI docs from these, so the API is self-documenting.
 2. **Async support**: VLM and OCR calls are I/O bound. Async handlers prevent blocking while waiting for model responses.
 3. **Built-in validation**: Request validation, file upload handling, and error responses come free.
