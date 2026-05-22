@@ -83,6 +83,12 @@ class Settings(BaseSettings):
     # --- Server ---
     host: str = "0.0.0.0"
     port: int = 8000
+    # --- Database ---
+    database_url: str = Field(
+        default="sqlite:///./docmind.db",
+        description="Database connection string"
+    )
+
     allowed_origins: list[str] = ["*"]
 
     model_config = {

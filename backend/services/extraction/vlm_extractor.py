@@ -171,15 +171,6 @@ class VLMExtractor:
             details={"last_error": str(last_error)},
         )
 
-    @retry(
-        stop=stop_after_attempt(3),
-        wait=wait_exponential(multiplier=1, min=2, max=15),
-        retry=retry_if_exception_type((ConnectionError, TimeoutError, Exception)),
-        before_sleep=lambda retry_state: logger.warning(
-            "vlm_retry",
-            attempt=retry_state.attempt_number,
-        ),
-    )
     async def _call_model(
         self,
         prompt: str,

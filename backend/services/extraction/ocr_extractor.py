@@ -39,6 +39,8 @@ class OCRExtractor:
         """Lazy-load PaddleOCR engine (heavy import, only load when needed)."""
         if self._engine is None:
             try:
+                import os
+                os.environ["FLAGS_use_mkldnn"] = "0"
                 from paddleocr import PaddleOCR
                 self._engine = PaddleOCR(
                     use_angle_cls=True,
