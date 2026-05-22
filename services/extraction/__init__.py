@@ -1,0 +1,1 @@
+# DocMind AI - Extraction Services
