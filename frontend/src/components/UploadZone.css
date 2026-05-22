@@ -1,0 +1,197 @@
+.upload-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 450px;
+  padding: 3rem;
+  text-align: center;
+  cursor: pointer;
+  transition: all var(--transition-normal);
+  position: relative;
+  overflow: hidden;
+  max-width: 700px;
+  margin: 4rem auto;
+  border-width: 2px;
+  border-style: dashed;
+}
+
+.upload-container.drag-active {
+  border-color: var(--accent-cyan);
+  background: rgba(56, 189, 248, 0.05);
+  box-shadow: 0 0 25px rgba(56, 189, 248, 0.15);
+  transform: scale(1.01);
+}
+
+.icon-wrapper {
+  margin-bottom: 1.5rem;
+  color: var(--text-muted);
+  transition: color var(--transition-fast), transform var(--transition-normal);
+}
+
+.upload-container:hover .icon-wrapper {
+  color: var(--accent-cyan);
+  transform: translateY(-5px) scale(1.05);
+}
+
+.upload-container:hover {
+  border-color: var(--accent-indigo);
+  box-shadow: 0 8px 32px 0 rgba(99, 102, 241, 0.1);
+}
+
+.upload-title {
+  font-size: 1.5rem;
+  margin-bottom: 0.5rem;
+  color: var(--text-primary);
+}
+
+.upload-subtitle {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  margin-bottom: 1.5rem;
+}
+
+.file-input {
+  display: none;
+}
+
+.select-btn {
+  background: linear-gradient(135deg, var(--accent-indigo), var(--accent-purple));
+  color: white;
+  border: none;
+  padding: 0.75rem 2rem;
+  border-radius: 9999px;
+  font-weight: 600;
+  font-family: var(--font-headings);
+  font-size: 0.95rem;
+  cursor: pointer;
+  box-shadow: 0 4px 14px 0 rgba(99, 102, 241, 0.4);
+  transition: all var(--transition-fast);
+}
+
+.select-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px 0 rgba(99, 102, 241, 0.6);
+}
+
+/* Stepper Loader Styles */
+.loading-box {
+  width: 100%;
+  max-width: 450px;
+  margin: 2rem auto;
+}
+
+.pulse-spinner {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  background: radial-gradient(circle, var(--border-glow) 0%, transparent 70%);
+  border: 3px solid transparent;
+  border-top-color: var(--accent-cyan);
+  border-bottom-color: var(--accent-indigo);
+  animation: spin-slow 2s linear infinite;
+  margin: 0 auto 2.5rem;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.pulse-spinner::before {
+  content: '';
+  position: absolute;
+  width: 90%;
+  height: 90%;
+  border-radius: 50%;
+  border: 1px dashed rgba(255,255,255,0.1);
+  animation: spin-slow 8s linear infinite reverse;
+}
+
+.step-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  text-align: left;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 12px;
+  padding: 1.5rem;
+  border: 1px solid var(--border-muted);
+}
+
+.step-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-size: 0.95rem;
+  color: var(--text-secondary);
+  transition: all var(--transition-fast);
+}
+
+.step-item.active {
+  color: var(--text-primary);
+  font-weight: 500;
+}
+
+.step-item.completed {
+  color: var(--status-success);
+}
+
+.step-item.pending {
+  color: var(--text-muted);
+}
+
+.step-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+}
+
+/* Error styles */
+.error-box {
+  background: var(--status-danger-glow);
+  border: 1px solid rgba(239, 68, 68, 0.25);
+  border-radius: 12px;
+  padding: 1.5rem;
+  margin-top: 1.5rem;
+  color: var(--text-primary);
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  align-items: center;
+  max-width: 500px;
+  width: 100%;
+}
+
+.error-title {
+  color: var(--status-danger);
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 1.1rem;
+}
+
+.error-desc {
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  text-align: center;
+}
+
+.retry-btn {
+  background: rgba(239, 68, 68, 0.1);
+  color: var(--status-danger);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  padding: 0.5rem 1.5rem;
+  border-radius: 9999px;
+  font-weight: 600;
+  cursor: pointer;
+  margin-top: 0.5rem;
+  transition: all var(--transition-fast);
+}
+
+.retry-btn:hover {
+  background: var(--status-danger);
+  color: white;
+}

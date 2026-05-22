@@ -1,0 +1,23 @@
+.btn-back {
+  transition: all var(--transition-fast) !important;
+}
+
+.btn-back:hover {
+  background: rgba(255, 255, 255, 0.08) !important;
+  border-color: var(--accent-cyan) !important;
+  color: var(--accent-cyan) !important;
+  transform: translateX(-3px);
+  box-shadow: 0 0 15px rgba(56, 189, 248, 0.15);
+}
+
+.text-cyan {
+  color: var(--accent-cyan);
+}
+
+header {
+  margin-top: 1rem;
+}
+
+footer {
+  margin-top: auto;
+}

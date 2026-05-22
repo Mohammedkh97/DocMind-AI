@@ -67,3 +67,9 @@ htmlcov/
 # Test assets and scratch files
 assets/
 scratch_test.py
+
+# Backend-specific ignores
+backend/venv/
+backend/.env
+backend/assets/
+backend/scratch_test.py
