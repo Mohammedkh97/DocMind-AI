@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { FileText, ClipboardList, Code, Building2, Landmark, Ship, AlertCircle } from 'lucide-react';
+import { FileText, ClipboardList, Code, Building2, Landmark, Ship, AlertCircle, Clock } from 'lucide-react';
 import './DataViewer.css';
 
 export default function DataViewer({ extractionData }) {
@@ -76,6 +76,13 @@ export default function DataViewer({ extractionData }) {
         >
           <Code size={18} />
           <span>Raw API JSON</span>
+        </button>
+        <button 
+          className={`tab-btn ${activeTab === 'performance' ? 'active' : ''}`} 
+          onClick={() => setActiveTab('performance')}
+        >
+          <Clock size={18} />
+          <span>Performance</span>
         </button>
       </div>
 
@@ -350,6 +357,76 @@ export default function DataViewer({ extractionData }) {
             <pre className="json-pre">
               {JSON.stringify(extractionData, null, 2)}
             </pre>
+          </div>
+        )}
+
+        {/* --- PERFORMANCE TAB --- */}
+        {activeTab === 'performance' && metadata && (
+          <div className="details-section">
+            <h4 className="section-title">Pipeline Execution Metrics</h4>
+            <div className="grid-cols-2">
+              <div className="field-card">
+                <div className="field-info">
+                  <span className="field-label">Total Processing Time</span>
+                  <span className="field-value">{metadata.processing_time_seconds} s</span>
+                </div>
+              </div>
+              <div className="field-card">
+                <div className="field-info">
+                  <span className="field-label">Primary Model</span>
+                  <span className="field-value">{metadata.primary_model}</span>
+                </div>
+              </div>
+              <div className="field-card">
+                <div className="field-info">
+                  <span className="field-label">Pages Processed</span>
+                  <span className="field-value">{metadata.pages_processed}</span>
+                </div>
+              </div>
+              <div className="field-card">
+                <div className="field-info">
+                  <span className="field-label">OCR Validation Used</span>
+                  <span className="field-value">{metadata.ocr_validation_used ? 'Yes' : 'No'}</span>
+                </div>
+              </div>
+            </div>
+
+            <h4 className="section-title" style={{ marginTop: '1.5rem' }}>Step-by-Step Execution Times</h4>
+            {metadata.execution_times ? (
+              <div className="table-wrapper">
+                <table className="viewer-table">
+                  <thead>
+                    <tr>
+                      <th>Pipeline Stage</th>
+                      <th style={{ width: '150px', textAlign: 'right' }}>Duration (Seconds)</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {Object.entries(metadata.execution_times).map(([stage, duration]) => (
+                      <tr key={stage}>
+                        <td style={{ textTransform: 'capitalize' }}>{stage.replace('_', ' ')}</td>
+                        <td style={{ textAlign: 'right', fontWeight: '600' }}>{duration} s</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <div style={{ color: 'var(--text-muted)' }}>Execution times not available in this response.</div>
+            )}
+            
+            {metadata.warnings?.length > 0 && (
+              <>
+                <h4 className="section-title" style={{ marginTop: '1.5rem', color: 'var(--status-warning)' }}>Pipeline Warnings</h4>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                  {metadata.warnings.map((warn, idx) => (
+                    <div key={idx} style={{ padding: '0.75rem', background: 'rgba(234, 179, 8, 0.1)', borderLeft: '3px solid var(--status-warning)', borderRadius: '4px', fontSize: '0.85rem' }}>
+                      {warn}
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
           </div>
         )}
       </div>
