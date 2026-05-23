@@ -14,6 +14,7 @@ The orchestrator implements the fallback chain:
 """
 
 import time
+import asyncio
 from typing import Any
 
 from core.config import get_settings
@@ -75,87 +76,31 @@ class ExtractionOrchestrator:
         execution_times["preprocessing"] += time.time() - t0
 
         # --- Stage 2: Classification & Extraction ---
+        # Run all pages concurrently to cut processing time in half
+        tasks = [self._process_page(page_info) for page_info in pages]
+        page_results = await asyncio.gather(*tasks)
+
         invoice_data = None
         packing_list_data = None
+        ocr_validation_used = False
 
-        for page_info in pages:
-            page_num = page_info["page_number"]
-            image_bytes = page_info["image_bytes"]
-
-            # Classify page
-            logger.info("pipeline_stage", stage="classification", page=page_num)
-            t0 = time.time()
-            page_type = await self.vlm_extractor.classify_page(image_bytes)
-            execution_times["classification"] += time.time() - t0
-            logger.info("page_type_determined", page=page_num, type=page_type)
-
-            # Run OCR for cross-validation (if enabled)
-            ocr_lines = []
-            if self.settings.enable_ocr_validation:
-                try:
-                    logger.info("pipeline_stage", stage="ocr_validation", page=page_num)
-                    t0 = time.time()
-                    ocr_result = await self.ocr_extractor.extract_text(
-                        page_info["enhanced_image"]
-                    )
-                    execution_times["ocr_validation"] += time.time() - t0
-                    ocr_lines = ocr_result.get("lines", [])
-                    ocr_validation_used = True
-                    logger.info(
-                        "ocr_validation_complete",
-                        page=page_num,
-                        lines=len(ocr_lines),
-                        avg_confidence=ocr_result.get("avg_confidence", 0),
-                    )
-                except Exception as e:
-                    logger.warning(
-                        "ocr_validation_skipped",
-                        page=page_num,
-                        error=str(e),
-                    )
-                    warnings.append(f"OCR validation failed for page {page_num}: {str(e)}")
-
-            # Create scorer with OCR data for cross-validation
-            scorer = ConfidenceScorer(ocr_lines=ocr_lines)
-            merger = ResultMerger(scorer=scorer)
-
-            # Extract based on page type
-            if page_type == "commercial_invoice":
-                invoice_data, json_repair, ext_time, raw_text = await self._extract_invoice(
-                    image_bytes, merger, page_num
-                )
-                execution_times["vlm_extraction"] += ext_time
-                json_repair_applied = json_repair_applied or json_repair
-                if raw_text: raw_vlm_texts[page_num] = raw_text
-
-            elif page_type == "packing_list":
-                packing_list_data, json_repair, ext_time, raw_text = await self._extract_packing_list(
-                    image_bytes, merger, page_num
-                )
-                execution_times["vlm_extraction"] += ext_time
-                json_repair_applied = json_repair_applied or json_repair
-                if raw_text: raw_vlm_texts[page_num] = raw_text
-
-            else:
-                # Unknown page type — try both extraction methods
-                logger.warning("unknown_page_type", page=page_num, type=page_type)
-                warnings.append(f"Page {page_num} classified as '{page_type}', attempting invoice extraction")
-
-                # Default: try invoice extraction on first page, packing list on second
-                if page_num == 1 and invoice_data is None:
-                    invoice_data, json_repair, ext_time, raw_text = await self._extract_invoice(
-                        image_bytes, merger, page_num
-                    )
-                    execution_times["vlm_extraction"] += ext_time
-                    json_repair_applied = json_repair_applied or json_repair
-                    if raw_text: raw_vlm_texts[page_num] = raw_text
-                elif packing_list_data is None:
-                    packing_list_data, json_repair, ext_time, raw_text = await self._extract_packing_list(
-                        image_bytes, merger, page_num
-                    )
-                    execution_times["vlm_extraction"] += ext_time
-                    json_repair_applied = json_repair_applied or json_repair
-                    if raw_text: raw_vlm_texts[page_num] = raw_text
+        for res in page_results:
+            page_num = res["page_num"]
+            if res["invoice_data"] and invoice_data is None:
+                invoice_data = res["invoice_data"]
+            if res["packing_list_data"] and packing_list_data is None:
+                packing_list_data = res["packing_list_data"]
+            
+            json_repair_applied = json_repair_applied or res["json_repair_applied"]
+            ocr_validation_used = ocr_validation_used or res.get("ocr_validation_used", False)
+            warnings.extend(res["warnings"])
+            if res["raw_text"]:
+                raw_vlm_texts[page_num] = res["raw_text"]
+            
+            # Since these ran concurrently, the wall-clock time for the stage is the max across all pages
+            execution_times["classification"] = max(execution_times["classification"], res["execution_times"]["classification"])
+            execution_times["ocr_validation"] = max(execution_times["ocr_validation"], res["execution_times"]["ocr_validation"])
+            execution_times["vlm_extraction"] = max(execution_times["vlm_extraction"], res["execution_times"]["vlm_extraction"])
 
         # --- Stage 3: Fill defaults for missing data ---
         if invoice_data is None:
@@ -265,3 +210,95 @@ class ExtractionOrchestrator:
                 error=str(e),
             )
             return PackingListData(), True, 0.0, ""
+
+    async def _process_page(self, page_info: dict) -> dict:
+        """
+        Process a single page concurrently.
+        Returns a dictionary with all the extracted info and metadata.
+        """
+        page_num = page_info["page_number"]
+        image_bytes = page_info["image_bytes"]
+        
+        result = {
+            "page_num": page_num,
+            "invoice_data": None,
+            "packing_list_data": None,
+            "json_repair_applied": False,
+            "ocr_validation_used": False,
+            "raw_text": None,
+            "warnings": [],
+            "execution_times": {
+                "classification": 0.0,
+                "ocr_validation": 0.0,
+                "vlm_extraction": 0.0,
+            }
+        }
+
+        # Classify page
+        logger.info("pipeline_stage", stage="classification", page=page_num)
+        t0 = time.time()
+        page_type = await self.vlm_extractor.classify_page(image_bytes)
+        result["execution_times"]["classification"] = time.time() - t0
+        logger.info("page_type_determined", page=page_num, type=page_type)
+
+        # Run OCR for cross-validation (if enabled)
+        ocr_lines = []
+        if self.settings.enable_ocr_validation:
+            try:
+                logger.info("pipeline_stage", stage="ocr_validation", page=page_num)
+                t0 = time.time()
+                ocr_result = await self.ocr_extractor.extract_text(
+                    page_info["enhanced_image"]
+                )
+                result["execution_times"]["ocr_validation"] = time.time() - t0
+                result["ocr_validation_used"] = True
+                ocr_lines = ocr_result.get("lines", [])
+                logger.info(
+                    "ocr_validation_complete",
+                    page=page_num,
+                    lines=len(ocr_lines),
+                    avg_confidence=ocr_result.get("avg_confidence", 0),
+                )
+            except Exception as e:
+                logger.warning(
+                    "ocr_validation_skipped",
+                    page=page_num,
+                    error=str(e),
+                )
+                result["warnings"].append(f"OCR validation failed for page {page_num}: {str(e)}")
+
+        scorer = ConfidenceScorer(ocr_lines=ocr_lines)
+        merger = ResultMerger(scorer=scorer)
+
+        # Extract based on page type
+        if page_type == "commercial_invoice":
+            inv, repair, ext_time, raw = await self._extract_invoice(image_bytes, merger, page_num)
+            result["invoice_data"] = inv
+            result["json_repair_applied"] = repair
+            result["execution_times"]["vlm_extraction"] = ext_time
+            result["raw_text"] = raw
+        elif page_type == "packing_list":
+            pl, repair, ext_time, raw = await self._extract_packing_list(image_bytes, merger, page_num)
+            result["packing_list_data"] = pl
+            result["json_repair_applied"] = repair
+            result["execution_times"]["vlm_extraction"] = ext_time
+            result["raw_text"] = raw
+        else:
+            logger.warning("unknown_page_type", page=page_num, type=page_type)
+            result["warnings"].append(f"Page {page_num} classified as '{page_type}', attempting invoice extraction")
+            
+            # Default: try invoice extraction on first page, packing list on second
+            if page_num == 1:
+                inv, repair, ext_time, raw = await self._extract_invoice(image_bytes, merger, page_num)
+                result["invoice_data"] = inv
+                result["json_repair_applied"] = repair
+                result["execution_times"]["vlm_extraction"] = ext_time
+                result["raw_text"] = raw
+            else:
+                pl, repair, ext_time, raw = await self._extract_packing_list(image_bytes, merger, page_num)
+                result["packing_list_data"] = pl
+                result["json_repair_applied"] = repair
+                result["execution_times"]["vlm_extraction"] = ext_time
+                result["raw_text"] = raw
+
+        return result
