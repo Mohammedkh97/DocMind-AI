@@ -102,7 +102,7 @@ async def extract_document(
 
     # --- Run Extraction Pipeline ---
     orchestrator = ExtractionOrchestrator()
-    result = await orchestrator.extract(file_bytes)
+    result = await orchestrator.extract(file_bytes, filename=file.filename)
 
     logger.info(
         "extraction_request_complete",

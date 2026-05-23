@@ -79,7 +79,7 @@ class VLMExtractor:
             logger.error("classification_failed", error=str(e))
             return "unknown"
 
-    async def extract_invoice(self, image_bytes: bytes) -> tuple[dict[str, Any], bool]:
+    async def extract_invoice(self, image_bytes: bytes) -> tuple[dict[str, Any], bool, str]:
         """
         Extract structured data from a commercial invoice image.
 
@@ -92,7 +92,7 @@ class VLMExtractor:
             doc_type="invoice",
         )
 
-    async def extract_packing_list(self, image_bytes: bytes) -> tuple[dict[str, Any], bool]:
+    async def extract_packing_list(self, image_bytes: bytes) -> tuple[dict[str, Any], bool, str]:
         """
         Extract structured data from a packing list image.
 
@@ -110,7 +110,7 @@ class VLMExtractor:
         image_bytes: bytes,
         prompt: str,
         doc_type: str,
-    ) -> tuple[dict[str, Any], bool]:
+    ) -> tuple[dict[str, Any], bool, str]:
         """
         Run extraction using VLM with retry and fallback logic.
 
@@ -154,7 +154,7 @@ class VLMExtractor:
                     repair_needed=repair_needed,
                 )
 
-                return parsed, repair_needed
+                return parsed, repair_needed, raw_response
 
             except Exception as e:
                 last_error = e

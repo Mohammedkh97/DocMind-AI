@@ -26,6 +26,7 @@ from services.extraction.vlm_extractor import VLMExtractor
 from services.extraction.ocr_extractor import OCRExtractor
 from services.extraction.confidence_scorer import ConfidenceScorer
 from services.extraction.result_merger import ResultMerger
+from services.extraction.output_saver import save_pipeline_outputs
 
 logger = get_logger("orchestrator")
 
@@ -44,7 +45,7 @@ class ExtractionOrchestrator:
         self.vlm_extractor = VLMExtractor()
         self.ocr_extractor = OCRExtractor()
 
-    async def extract(self, file_bytes: bytes) -> ExtractionResponse:
+    async def extract(self, file_bytes: bytes, filename: str = "document.pdf") -> ExtractionResponse:
         """
         Run the complete extraction pipeline on a PDF.
 
@@ -65,6 +66,7 @@ class ExtractionOrchestrator:
             "ocr_validation": 0.0,
             "vlm_extraction": 0.0,
         }
+        raw_vlm_texts = {}
 
         # --- Stage 1: Preprocessing ---
         logger.info("pipeline_stage", stage="preprocessing")
@@ -119,18 +121,20 @@ class ExtractionOrchestrator:
 
             # Extract based on page type
             if page_type == "commercial_invoice":
-                invoice_data, json_repair, ext_time = await self._extract_invoice(
+                invoice_data, json_repair, ext_time, raw_text = await self._extract_invoice(
                     image_bytes, merger, page_num
                 )
                 execution_times["vlm_extraction"] += ext_time
                 json_repair_applied = json_repair_applied or json_repair
+                if raw_text: raw_vlm_texts[page_num] = raw_text
 
             elif page_type == "packing_list":
-                packing_list_data, json_repair, ext_time = await self._extract_packing_list(
+                packing_list_data, json_repair, ext_time, raw_text = await self._extract_packing_list(
                     image_bytes, merger, page_num
                 )
                 execution_times["vlm_extraction"] += ext_time
                 json_repair_applied = json_repair_applied or json_repair
+                if raw_text: raw_vlm_texts[page_num] = raw_text
 
             else:
                 # Unknown page type — try both extraction methods
@@ -139,17 +143,19 @@ class ExtractionOrchestrator:
 
                 # Default: try invoice extraction on first page, packing list on second
                 if page_num == 1 and invoice_data is None:
-                    invoice_data, json_repair, ext_time = await self._extract_invoice(
+                    invoice_data, json_repair, ext_time, raw_text = await self._extract_invoice(
                         image_bytes, merger, page_num
                     )
                     execution_times["vlm_extraction"] += ext_time
                     json_repair_applied = json_repair_applied or json_repair
+                    if raw_text: raw_vlm_texts[page_num] = raw_text
                 elif packing_list_data is None:
-                    packing_list_data, json_repair, ext_time = await self._extract_packing_list(
+                    packing_list_data, json_repair, ext_time, raw_text = await self._extract_packing_list(
                         image_bytes, merger, page_num
                     )
                     execution_times["vlm_extraction"] += ext_time
                     json_repair_applied = json_repair_applied or json_repair
+                    if raw_text: raw_vlm_texts[page_num] = raw_text
 
         # --- Stage 3: Fill defaults for missing data ---
         if invoice_data is None:
@@ -185,6 +191,14 @@ class ExtractionOrchestrator:
             metadata=metadata,
         )
 
+        # --- Stage 4: Save Pipeline Outputs ---
+        save_pipeline_outputs(
+            filename=filename,
+            pages=pages,
+            raw_vlm_texts=raw_vlm_texts,
+            extraction_response=response.model_dump()
+        )
+
         logger.info(
             "extraction_pipeline_complete",
             processing_time=round(processing_time, 2),
@@ -200,7 +214,7 @@ class ExtractionOrchestrator:
         image_bytes: bytes,
         merger: ResultMerger,
         page_num: int,
-    ) -> tuple[InvoiceData, bool, float]:
+    ) -> tuple[InvoiceData, bool, float, str]:
         """
         Extract invoice data with VLM, falling back to OCR if needed.
 
@@ -210,11 +224,11 @@ class ExtractionOrchestrator:
         try:
             logger.info("pipeline_stage", stage="vlm_extraction", page=page_num, doc_type="invoice")
             t0 = time.time()
-            raw_data, json_repair = await self.vlm_extractor.extract_invoice(image_bytes)
+            raw_data, json_repair, raw_text = await self.vlm_extractor.extract_invoice(image_bytes)
             invoice = merger.build_invoice(raw_data)
             
             # Note: The time is tracked, but we need to return it to add to the total
-            return invoice, json_repair, time.time() - t0
+            return invoice, json_repair, time.time() - t0, raw_text
 
         except Exception as e:
             logger.error(
@@ -223,14 +237,14 @@ class ExtractionOrchestrator:
                 error=str(e),
             )
             # Return empty invoice with warning rather than crashing
-            return InvoiceData(), True, 0.0
+            return InvoiceData(), True, 0.0, ""
 
     async def _extract_packing_list(
         self,
         image_bytes: bytes,
         merger: ResultMerger,
         page_num: int,
-    ) -> tuple[PackingListData, bool, float]:
+    ) -> tuple[PackingListData, bool, float, str]:
         """
         Extract packing list data with VLM, falling back to OCR if needed.
 
@@ -240,9 +254,9 @@ class ExtractionOrchestrator:
         try:
             logger.info("pipeline_stage", stage="vlm_extraction", page=page_num, doc_type="packing_list")
             t0 = time.time()
-            raw_data, json_repair = await self.vlm_extractor.extract_packing_list(image_bytes)
+            raw_data, json_repair, raw_text = await self.vlm_extractor.extract_packing_list(image_bytes)
             packing_list = merger.build_packing_list(raw_data)
-            return packing_list, json_repair, time.time() - t0
+            return packing_list, json_repair, time.time() - t0, raw_text
 
         except Exception as e:
             logger.error(
@@ -250,4 +264,4 @@ class ExtractionOrchestrator:
                 page=page_num,
                 error=str(e),
             )
-            return PackingListData(), True, 0.0
+            return PackingListData(), True, 0.0, ""
