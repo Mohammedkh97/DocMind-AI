@@ -20,9 +20,13 @@ CRITICAL RULES:
 6. For dates, extract in the format shown in the document.
 7. Extract ALL line items from the table — do not skip any rows.
 
+8. Include a full, pure text transcription of the document formatted nicely in markdown under the 'markdown_transcription' key.
+
 Return a JSON object with this EXACT structure:
 {
-  "invoice_number": {"value": "string or null", "confidence": 0.0},
+  "markdown_transcription": "The full text of the document transcribed exactly as seen, formatted in markdown",
+  "structured_data": {
+    "invoice_number": {"value": "string or null", "confidence": 0.0},
   "invoice_date": {"value": "string or null", "confidence": 0.0},
   "payment_terms": {"value": "string or null", "confidence": 0.0},
   "currency": {"value": "string or null", "confidence": 0.0},
@@ -70,6 +74,7 @@ Return a JSON object with this EXACT structure:
     "etd": {"value": "string or null", "confidence": 0.0}
   }
 }
+}
 
 Return ONLY the JSON object. No explanations, no markdown fences, no extra text."""
 
@@ -85,9 +90,13 @@ CRITICAL RULES:
 6. Extract ALL line items from the table — do not skip any rows.
 7. Weights should be in KG as shown in the document.
 
+8. Include a full, pure text transcription of the document formatted nicely in markdown under the 'markdown_transcription' key.
+
 Return a JSON object with this EXACT structure:
 {
-  "packing_list_number": {"value": "string or null", "confidence": 0.0},
+  "markdown_transcription": "The full text of the document transcribed exactly as seen, formatted in markdown",
+  "structured_data": {
+    "packing_list_number": {"value": "string or null", "confidence": 0.0},
   "ref_invoice": {"value": "string or null", "confidence": 0.0},
   "date": {"value": "string or null", "confidence": 0.0},
   "line_items": [
@@ -104,6 +113,7 @@ Return a JSON object with this EXACT structure:
   "total_cartons": {"value": 0, "confidence": 0.0},
   "total_net_weight": {"value": 0.0, "confidence": 0.0},
   "total_gross_weight": {"value": 0.0, "confidence": 0.0}
+}
 }
 
 Return ONLY the JSON object. No explanations, no markdown fences, no extra text."""

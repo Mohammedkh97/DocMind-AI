@@ -138,6 +138,10 @@ class VLMExtractor:
 
                 # Parse through JSON repair pipeline
                 parsed, repair_needed = safe_parse_json(raw_response)
+                
+                # Extract the newly added fields
+                markdown_text = parsed.get("markdown_transcription", raw_response)
+                structured_data = parsed.get("structured_data", parsed)
 
                 if repair_needed:
                     logger.warning(
@@ -150,11 +154,11 @@ class VLMExtractor:
                     "vlm_extraction_complete",
                     doc_type=doc_type,
                     model=model_name,
-                    fields_extracted=len(parsed),
+                    fields_extracted=len(structured_data),
                     repair_needed=repair_needed,
                 )
 
-                return parsed, repair_needed, raw_response
+                return structured_data, repair_needed, markdown_text
 
             except Exception as e:
                 last_error = e
