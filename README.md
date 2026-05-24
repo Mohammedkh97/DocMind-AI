@@ -1,11 +1,11 @@
 <div align="center">
-  <img src="backend/assets/assignment/logo.png" alt="DocMind AI Logo" width="150" onerror="this.style.display='none'"/>
+  <img src="logo.png" alt="DocMind AI Logo" width="150" onerror="this.style.display='none'"/>
   
   # 🧠 DocMind AI
 
-  **Next-Generation Hybrid Document Intelligence System**
+**Next-Generation Hybrid Document Intelligence System**
 
-  *Combining VLM (Vision-Language Model) and OCR-based structured extraction with deterministic compliance scoring for logistics document processing and customs compliance automation.*
+_Combining VLM (Vision-Language Model) and OCR-based structured extraction with deterministic compliance scoring for logistics document processing and customs compliance automation._
 
   <p align="center">
     <a href="https://python.org"><img src="https://img.shields.io/badge/Python-3.11-3776AB?style=for-the-badge&logo=python&logoColor=white" alt="Python 3.11"/></a>
@@ -48,27 +48,28 @@ graph TD;
 
 - **VLM-First Extraction**: Gemini 2.5 Flash processes document images directly, understanding layout and tables natively — unlike traditional OCR→LLM pipelines that lose spatial context.
 - **Multi-Signal Confidence**: Each field's confidence combines VLM self-assessment, OCR cross-validation, format validation, and business rule checks.
-- **Deterministic Compliance**: The model extracts data; pure Python code scores it. *Same input = same score, always.*
+- **Deterministic Compliance**: The model extracts data; pure Python code scores it. _Same input = same score, always._
 - **4-Layer JSON Repair**: The API always returns valid JSON, even when the model's output is malformed.
 
 ---
 
 ## 🛠️ Tech Stack
 
-| Component | Choice | Why |
-| :--- | :--- | :--- |
-| **Backend** | `FastAPI` | Async, Pydantic-native, auto-docs |
-| **VLM** | `Gemini 2.5 Flash` | Best cost/accuracy for document vision |
-| **OCR** | `PaddleOCR` | Best open-source OCR for degraded scans |
-| **Vision** | `OpenCV + PyMuPDF` | Robust preprocessing pipeline |
-| **Validation** | `Pydantic v2` | Schema enforcement + serialization |
-| **Logging** | `structlog` | Production JSON logging |
+| Component      | Choice             | Why                                     |
+| :------------- | :----------------- | :-------------------------------------- |
+| **Backend**    | `FastAPI`          | Async, Pydantic-native, auto-docs       |
+| **VLM**        | `Gemini 2.5 Flash` | Best cost/accuracy for document vision  |
+| **OCR**        | `PaddleOCR`        | Best open-source OCR for degraded scans |
+| **Vision**     | `OpenCV + PyMuPDF` | Robust preprocessing pipeline           |
+| **Validation** | `Pydantic v2`      | Schema enforcement + serialization      |
+| **Logging**    | `structlog`        | Production JSON logging                 |
 
 ---
 
 ## 🚀 Quick Start
 
 ### ⚙️ Prerequisites
+
 - **Python 3.12+** (Or use Docker)
 - **Gemini API key** ([Get one here](https://aistudio.google.com/apikey))
 
@@ -108,6 +109,7 @@ cp .env.example .env
 cd ..
 docker compose up --build
 ```
+
 > The API will be available at `http://localhost:8000`.<br>
 > Check out the **Interactive API documentation** at `http://localhost:8000/docs`.
 
@@ -119,6 +121,7 @@ docker compose up --build
 <summary><b>🟢 <code>POST /extract</code></b> - Extract structured data from a scanned logistics PDF</summary>
 
 **Request:**
+
 ```bash
 curl -X POST "http://localhost:8000/extract" \
   -H "Content-Type: multipart/form-data" \
@@ -126,12 +129,15 @@ curl -X POST "http://localhost:8000/extract" \
 ```
 
 **Response:**
+
 ```json
 {
   "invoice": {
     "invoice_number": { "value": "CRG-INV-2024-0087", "confidence": 0.97 },
     "invoice_date": { "value": "March 14, 2024", "confidence": 0.95 },
-    "seller": { "name": { "value": "ShanghaiTex Co. Ltd", "confidence": 0.96 } },
+    "seller": {
+      "name": { "value": "ShanghaiTex Co. Ltd", "confidence": 0.96 }
+    },
     "subtotal": { "value": 13680.0, "confidence": 0.95 }
   },
   "metadata": {
@@ -140,12 +146,14 @@ curl -X POST "http://localhost:8000/extract" \
   }
 }
 ```
+
 </details>
 
 <details>
 <summary><b>🔵 <code>POST /compliance-score</code></b> - Score extracted data against compliance rules</summary>
 
 **Request:**
+
 ```bash
 curl -X POST "http://localhost:8000/compliance-score" \
   -H "Content-Type: application/json" \
@@ -153,6 +161,7 @@ curl -X POST "http://localhost:8000/compliance-score" \
 ```
 
 **Response:**
+
 ```json
 {
   "score": 62,
@@ -162,6 +171,7 @@ curl -X POST "http://localhost:8000/compliance-score" \
   "summary": "Document scored 62/100 (Grade: D). 2 critical issue(s) found requiring immediate attention."
 }
 ```
+
 </details>
 
 <details>
@@ -170,6 +180,7 @@ curl -X POST "http://localhost:8000/compliance-score" \
 ```bash
 curl http://localhost:8000/health
 ```
+
 </details>
 
 ---
@@ -177,22 +188,27 @@ curl http://localhost:8000/health
 ## 🧪 Testing the API
 
 ### 🌐 Swagger UI (Recommended)
+
 FastAPI automatically generates an interactive Swagger UI. This is the easiest way to test the endpoints!
+
 1. Start the backend server (`uvicorn main:app --reload` or via Docker).
 2. Open your browser and go to: [http://localhost:8000/docs](http://localhost:8000/docs)
 3. **To test `/extract`**: Click on the **`POST /extract`** endpoint, click **"Try it out"**, upload your PDF, and hit **"Execute"**. You can then copy the JSON response block.
 4. **To test `/compliance-score`**: Click on the **`POST /compliance-score`** endpoint, click **"Try it out"**, paste the JSON response you got from `/extract` into the Request body box, and hit **"Execute"**.
 
 ### 📮 Postman
+
 **Testing `/extract`**:
+
 1. Create a new **POST** request to `http://localhost:8000/extract`.
 2. Go to the **Body** tab and select **form-data**.
-3. Add a new key named `file`, change its type from *Text* to *File* (by hovering over the key cell), and select your PDF document.
+3. Add a new key named `file`, change its type from _Text_ to _File_ (by hovering over the key cell), and select your PDF document.
 4. Hit **Send**! (Save the JSON output for the next step).
 
 **Testing `/compliance-score`**:
+
 1. Create a new **POST** request to `http://localhost:8000/compliance-score`.
-2. Go to the **Body** tab, select **raw**, and change the format dropdown from *Text* to **JSON**.
+2. Go to the **Body** tab, select **raw**, and change the format dropdown from _Text_ to **JSON**.
 3. Paste the full JSON response you got from the `/extract` endpoint into the text area.
 4. Hit **Send**!
 
