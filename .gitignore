@@ -63,7 +63,6 @@ local_db.sqlite
 sqlite.db
 
 # Project specific caches and outputs
-ade/
 .pytest_cache/
 .coverage
 htmlcov/

@@ -1,118 +1,124 @@
-# DocMind AI
+<div align="center">
+  <img src="https://raw.githubusercontent.com/Mohammedkh97/DocMind-AI/main/backend/assets/logo.png" alt="DocMind AI Logo" width="150" onerror="this.style.display='none'"/>
+  
+  # 🧠 DocMind AI
 
-Hybrid document intelligence system combining VLM (Vision-Language Model) and OCR-based structured extraction with deterministic compliance scoring for logistics document processing and customs compliance automation.
+  **Next-Generation Hybrid Document Intelligence System**
 
-<p align="center">
-  <img src="https://img.shields.io/badge/Python-3.11-3776AB?style=for-the-badge&logo=python&logoColor=white" alt="Python 3.11"/>
-  <img src="https://img.shields.io/badge/FastAPI-0.136-009688?style=for-the-badge&logo=fastapi&logoColor=white" alt="FastAPI"/>
-  <img src="https://img.shields.io/badge/PostgreSQL-15-4169E1?style=for-the-badge&logo=postgresql&logoColor=white" alt="PostgreSQL"/>
-  <img src="https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB" alt="React"/>
-</p>
+  *Combining VLM (Vision-Language Model) and OCR-based structured extraction with deterministic compliance scoring for logistics document processing and customs compliance automation.*
+
+  <p align="center">
+    <a href="https://python.org"><img src="https://img.shields.io/badge/Python-3.11-3776AB?style=for-the-badge&logo=python&logoColor=white" alt="Python 3.11"/></a>
+    <a href="https://fastapi.tiangolo.com/"><img src="https://img.shields.io/badge/FastAPI-0.136-009688?style=for-the-badge&logo=fastapi&logoColor=white" alt="FastAPI"/></a>
+    <a href="https://react.dev/"><img src="https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB" alt="React"/></a>
+    <a href="https://postgresql.org"><img src="https://img.shields.io/badge/PostgreSQL-15-4169E1?style=for-the-badge&logo=postgresql&logoColor=white" alt="PostgreSQL"/></a>
+    <a href="https://docker.com"><img src="https://img.shields.io/badge/Docker-Supported-2496ED?style=for-the-badge&logo=docker&logoColor=white" alt="Docker"/></a>
+    <a href="https://aistudio.google.com/"><img src="https://img.shields.io/badge/Gemini_2.5-Flash-4285F4?style=for-the-badge&logo=google&logoColor=white" alt="Gemini"/></a>
+  </p>
+</div>
 
 ---
 
 ## 📋 Table of Contents
 
-- [Architecture Overview](#architecture-overview)
-- [Tech Stack](#tech-stack)
-- [Quick Start](#quick-start)
-  - [Prerequisites](#prerequisites)
-  - [Local Setup](#local-setup)
-  - [Docker Setup](#docker-setup)
-- [API Endpoints](#api-endpoints)
-  - [POST /extract](#post-extract)
-  - [POST /compliance-score](#post-compliance-score)
-  - [GET /health](#get-health)
-- [Project Structure](#project-structure)
-- [Framework Choice](#framework-choice)
-- [Key Documents](#key-documents)
+- [✨ Architecture Overview](#-architecture-overview)
+- [🛠️ Tech Stack](#️-tech-stack)
+- [🚀 Quick Start](#-quick-start)
+- [🔌 API Endpoints](#-api-endpoints)
+- [📂 Project Structure](#-project-structure)
+- [🗺️ Roadmap](#️-roadmap)
+- [💡 Framework Choice](#-framework-choice)
+- [📚 Key Documents](#-key-documents)
 
 ---
 
-## Architecture Overview
+## ✨ Architecture Overview
 
-```
-PDF Upload → Image Enhancement → VLM Extraction (Gemini 2.5 Flash)
-                                        ↓
-                                 OCR Cross-Validation (PaddleOCR)
-                                        ↓
-                                 Confidence Scoring (multi-signal)
-                                        ↓
-                                 Structured JSON Response
-                                        ↓
-                                 Compliance Scoring (deterministic rules)
+```mermaid
+graph TD;
+    A[PDF Upload] --> B[Image Enhancement];
+    B --> C[VLM Extraction <br> <i>Gemini 2.5 Flash</i>];
+    C --> D[OCR Cross-Validation <br> <i>PaddleOCR</i>];
+    D --> E[Confidence Scoring <br> <i>multi-signal</i>];
+    E --> F[Structured JSON Response];
+    F --> G[Compliance Scoring <br> <i>deterministic rules</i>];
 ```
 
-**Key architectural decisions:**
+### 🎯 Key Architectural Decisions
 
-- **VLM-first extraction**: Gemini 2.5 Flash processes document images directly, understanding layout and tables natively — unlike OCR→LLM pipelines that lose spatial context
-- **Multi-signal confidence**: Each field's confidence combines VLM self-assessment, OCR cross-validation, format validation, and business rule checks
-- **Deterministic compliance**: The model extracts data; pure Python code scores it. Same input = same score, always
-- **4-layer JSON repair**: The API always returns valid JSON, even when the model's output is malformed
+- **VLM-First Extraction**: Gemini 2.5 Flash processes document images directly, understanding layout and tables natively — unlike traditional OCR→LLM pipelines that lose spatial context.
+- **Multi-Signal Confidence**: Each field's confidence combines VLM self-assessment, OCR cross-validation, format validation, and business rule checks.
+- **Deterministic Compliance**: The model extracts data; pure Python code scores it. *Same input = same score, always.*
+- **4-Layer JSON Repair**: The API always returns valid JSON, even when the model's output is malformed.
 
-## Tech Stack
+---
 
-| Component        | Choice           | Why                                     |
-| ---------------- | ---------------- | --------------------------------------- |
-| Backend          | FastAPI          | Async, Pydantic-native, auto-docs       |
-| VLM              | Gemini 2.5 Flash | Best cost/accuracy for document vision  |
-| OCR              | PaddleOCR        | Best open-source OCR for degraded scans |
-| Image Processing | OpenCV + PyMuPDF | Robust preprocessing pipeline           |
-| Validation       | Pydantic v2      | Schema enforcement + serialization      |
-| Logging          | structlog        | Production JSON logging                 |
-| Retry            | tenacity         | Exponential backoff for API calls       |
+## 🛠️ Tech Stack
 
-## Quick Start
+| Component | Choice | Why |
+| :--- | :--- | :--- |
+| **Backend** | `FastAPI` | Async, Pydantic-native, auto-docs |
+| **VLM** | `Gemini 2.5 Flash` | Best cost/accuracy for document vision |
+| **OCR** | `PaddleOCR` | Best open-source OCR for degraded scans |
+| **Vision** | `OpenCV + PyMuPDF` | Robust preprocessing pipeline |
+| **Validation** | `Pydantic v2` | Schema enforcement + serialization |
+| **Logging** | `structlog` | Production JSON logging |
 
-### Prerequisites
+---
 
-- Python 3.12+
-- Gemini API key ([get one here](https://aistudio.google.com/apikey))
+## 🚀 Quick Start
 
-### Local Setup
+### ⚙️ Prerequisites
+- **Python 3.12+** (Or use Docker)
+- **Gemini API key** ([Get one here](https://aistudio.google.com/apikey))
+
+### 💻 Local Setup
 
 ```bash
-# Clone and enter project
-git clone https://github.com/yourusername/DocMind-AI.git
+# 1. Clone and enter project
+git clone https://github.com/Mohammedkh97/DocMind-AI.git
 cd DocMind-AI
 
-# Create virtual environment
+# 2. Create virtual environment
 python -m venv venv
 source venv/bin/activate  # Windows: venv\Scripts\activate
 
-# Install dependencies
-pip install -r requirements.txt
+# 3. Install dependencies
+pip install -r backend/requirements.txt
 
-# Configure environment
+# 4. Configure environment
+cd backend
 cp .env.example .env
-# Edit .env and add your GEMINI_API_KEY
+# 📝 Edit .env and add your GEMINI_API_KEY and other keys
 
-# Run the server
+# 5. Run the server
 uvicorn main:app --reload
 ```
 
-### Docker Setup
+### 🐳 Docker Setup
+
+> **Note:** The easiest way to get up and running without dependency issues!
 
 ```bash
 # Copy env file and add your API key
+cd backend
 cp .env.example .env
 
-# Build and run
+# Build and run the entire stack
+cd ..
 docker compose up --build
 ```
+> The API will be available at `http://localhost:8000`.<br>
+> Check out the **Interactive API documentation** at `http://localhost:8000/docs`.
 
-The API will be available at `http://localhost:8000`.
+---
 
-API documentation: `http://localhost:8000/docs`
+## 🔌 API Endpoints
 
-## API Endpoints
-
-### `POST /extract`
-
-Extract structured data from a scanned logistics PDF.
+<details>
+<summary><b>🟢 <code>POST /extract</code></b> - Extract structured data from a scanned logistics PDF</summary>
 
 **Request:**
-
 ```bash
 curl -X POST "http://localhost:8000/extract" \
   -H "Content-Type: multipart/form-data" \
@@ -120,65 +126,26 @@ curl -X POST "http://localhost:8000/extract" \
 ```
 
 **Response:**
-
 ```json
 {
   "invoice": {
     "invoice_number": { "value": "CRG-INV-2024-0087", "confidence": 0.97 },
     "invoice_date": { "value": "March 14, 2024", "confidence": 0.95 },
-    "seller": {
-      "name": { "value": "ShanghaiTex Co. Ltd", "confidence": 0.96 }
-    },
-    "buyer": {
-      "name": { "value": "Al Baraka Trading LLC", "confidence": 0.96 }
-    },
-    "port_of_loading": { "value": "Shanghai Pudong", "confidence": 0.94 },
-    "port_of_discharge": { "value": "Jebel Ali, UAE", "confidence": 0.95 },
-    "currency": { "value": "USD", "confidence": 0.98 },
-    "incoterms": { "value": "FOB Shanghai", "confidence": 0.95 },
-    "line_items": [
-      {
-        "item_no": { "value": 1, "confidence": 0.98 },
-        "description": {
-          "value": "Cotton Woven Fabric (White, 150cm)",
-          "confidence": 0.96
-        },
-        "hs_code": { "value": "52081100", "confidence": 0.97 },
-        "quantity": { "value": 2400, "confidence": 0.97 },
-        "unit": { "value": "MTR", "confidence": 0.98 },
-        "unit_price": { "value": 1.85, "confidence": 0.96 },
-        "amount": { "value": 4440.0, "confidence": 0.97 }
-      }
-    ],
-    "subtotal": { "value": 13680.0, "confidence": 0.95 },
-    "grand_total": { "value": 13680.0, "confidence": 0.95 }
-  },
-  "packing_list": {
-    "packing_list_number": { "value": "CRG-PL-2024-0087", "confidence": 0.96 },
-    "ref_invoice": { "value": "CRG-INV-2024-0087", "confidence": 0.95 },
-    "total_cartons": { "value": 227, "confidence": 0.95 },
-    "total_net_weight": { "value": 2944.0, "confidence": 0.94 },
-    "total_gross_weight": { "value": 3087.0, "confidence": 0.94 },
-    "line_items": ["..."]
+    "seller": { "name": { "value": "ShanghaiTex Co. Ltd", "confidence": 0.96 } },
+    "subtotal": { "value": 13680.0, "confidence": 0.95 }
   },
   "metadata": {
     "processing_time_seconds": 4.2,
-    "primary_model": "gemini-2.5-flash",
-    "fallback_used": false,
-    "ocr_validation_used": true,
-    "pages_processed": 2,
-    "json_repair_applied": false,
-    "warnings": []
+    "primary_model": "gemini-2.5-flash"
   }
 }
 ```
+</details>
 
-### `POST /compliance-score`
-
-Score extracted data against compliance rules.
+<details>
+<summary><b>🔵 <code>POST /compliance-score</code></b> - Score extracted data against compliance rules</summary>
 
 **Request:**
-
 ```bash
 curl -X POST "http://localhost:8000/compliance-score" \
   -H "Content-Type: application/json" \
@@ -186,116 +153,124 @@ curl -X POST "http://localhost:8000/compliance-score" \
 ```
 
 **Response:**
-
 ```json
 {
   "score": 62,
   "grade": "D",
   "total_issues": 5,
   "critical_issues": 2,
-  "major_issues": 2,
-  "minor_issues": 1,
-  "warnings": 0,
-  "issues": [
-    {
-      "rule_id": "MATH-002",
-      "rule_name": "subtotal_sum",
-      "field": "invoice.subtotal",
-      "severity": "critical",
-      "category": "mathematical_accuracy",
-      "found": "$13,680.00",
-      "expected": "$13,440.00 (sum of line items)",
-      "deduction": 15,
-      "description": "Stated subtotal ($13,680.00) does not match the sum of line item amounts ($13,440.00). Discrepancy: $240.00"
-    },
-    {
-      "rule_id": "DATA-001",
-      "rule_name": "zero_unit_price",
-      "field": "invoice.line_items[3].unit_price",
-      "severity": "major",
-      "category": "data_quality",
-      "found": "$0.00 (qty: 950)",
-      "expected": "Non-zero unit price for items with quantity > 0",
-      "deduction": 5,
-      "description": "Line item 4 (Denim Fabric (Indigo, 160cm)) has a unit price of $0.00 with quantity 950."
-    }
-  ],
-  "rules_evaluated": 18,
   "summary": "Document scored 62/100 (Grade: D). 2 critical issue(s) found requiring immediate attention."
 }
 ```
+</details>
 
-### `GET /health`
-
-Health check endpoint.
+<details>
+<summary><b>⚪ <code>GET /health</code></b> - Health check endpoint</summary>
 
 ```bash
 curl http://localhost:8000/health
 ```
+</details>
 
-## Project Structure
+---
 
-```
+## 🧪 Testing the API
+
+### 🌐 Swagger UI (Recommended)
+FastAPI automatically generates an interactive Swagger UI. This is the easiest way to test the endpoints!
+1. Start the backend server (`uvicorn main:app --reload` or via Docker).
+2. Open your browser and go to: [http://localhost:8000/docs](http://localhost:8000/docs)
+3. **To test `/extract`**: Click on the **`POST /extract`** endpoint, click **"Try it out"**, upload your PDF, and hit **"Execute"**. You can then copy the JSON response block.
+4. **To test `/compliance-score`**: Click on the **`POST /compliance-score`** endpoint, click **"Try it out"**, paste the JSON response you got from `/extract` into the Request body box, and hit **"Execute"**.
+
+### 📮 Postman
+**Testing `/extract`**:
+1. Create a new **POST** request to `http://localhost:8000/extract`.
+2. Go to the **Body** tab and select **form-data**.
+3. Add a new key named `file`, change its type from *Text* to *File* (by hovering over the key cell), and select your PDF document.
+4. Hit **Send**! (Save the JSON output for the next step).
+
+**Testing `/compliance-score`**:
+1. Create a new **POST** request to `http://localhost:8000/compliance-score`.
+2. Go to the **Body** tab, select **raw**, and change the format dropdown from *Text* to **JSON**.
+3. Paste the full JSON response you got from the `/extract` endpoint into the text area.
+4. Hit **Send**!
+
+---
+
+## 📂 Project Structure
+
+```text
 DocMind-AI/
-├── main.py                              # FastAPI application entry point
 ├── ARCHITECTURE.md                      # Architecture decisions (6 questions)
 ├── RUBRIC.md                            # Compliance scoring rules
-├── Dockerfile                           # Container definition
 ├── docker-compose.yml                   # One-command setup
-├── requirements.txt                     # Python dependencies
-├── .env.example                         # Environment template
+├── README.md                            # Project documentation
 │
-├── api/                                 # API Layer
-│   ├── routers/
-│   │   ├── extract.py                   # POST /extract
-│   │   └── compliance.py               # POST /compliance-score
-│   ├── middleware.py                    # Request tracking, error handling
-│   └── dependencies.py                 # Dependency injection
+├── backend/                             # FastAPI Backend
+│   ├── main.py                          # FastAPI application entry point
+│   ├── Dockerfile                       # Container definition
+│   ├── requirements.txt                 # Python dependencies
+│   ├── .env.example                     # Environment template
+│   │
+│   ├── api/                             # API Layer
+│   │   ├── routers/                     # Extract and compliance routes
+│   │   ├── middleware.py                # Request tracking, error handling
+│   │   └── dependencies.py              # Dependency injection
+│   │
+│   ├── core/                            # Core Infrastructure
+│   │   ├── config.py                    # Pydantic BaseSettings
+│   │   ├── exceptions.py                # Custom exception hierarchy
+│   │   └── logging.py                   # Structured JSON logging
+│   │
+│   ├── schemas/                         # Data Contracts (Pydantic Models)
+│   ├── services/                        # Business Logic (Extraction, Compliance)
+│   ├── prompts/                         # Extraction Prompts
+│   ├── tests/                           # Tests
+│   ├── assets/                          # Input images and documents
+│   └── outputs/                         # 🗂️ Note: Created automatically after starting processing files
 │
-├── core/                                # Core Infrastructure
-│   ├── config.py                        # Pydantic BaseSettings
-│   ├── exceptions.py                    # Custom exception hierarchy
-│   └── logging.py                       # Structured JSON logging
+├── frontend/                            # ⚛️ React Frontend Application
 │
-├── schemas/                             # Data Contracts
-│   ├── common.py                        # ConfidenceField[T], metadata
-│   ├── extraction.py                    # Extraction response models
-│   └── compliance.py                    # Compliance response models
-│
-├── services/                            # Business Logic
-│   ├── extraction/
-│   │   ├── orchestrator.py              # Pipeline coordinator
-│   │   ├── preprocessor.py              # PDF → enhanced images
-│   │   ├── vlm_extractor.py             # Gemini VLM extraction
-│   │   ├── ocr_extractor.py             # PaddleOCR fallback
-│   │   ├── confidence_scorer.py         # Multi-signal confidence
-│   │   └── result_merger.py             # Raw → Pydantic models
-│   ├── compliance/
-│   │   ├── engine.py                    # Rule evaluation orchestrator
-│   │   ├── rules.py                     # All compliance rules
-│   │   └── scorer.py                    # Deterministic scoring
-│   └── common/
-│       └── json_repair.py              # 4-layer JSON repair
-│
-├── prompts/                             # Extraction Prompts
-│   └── extraction_prompts.py            # Invoice/PL/classification prompts
-│
-└── tests/                               # Tests
-    ├── test_extract.py
-    ├── test_compliance.py
-    └── test_json_repair.py
+└── Agentic Document Extractor/          # 🤖 Agentic extraction concepts and experiments
 ```
 
-## Framework Choice
+---
 
-**FastAPI** over Flask, Django, or Express.js because:
+## 🗺️ Roadmap
 
-1. **Native Pydantic integration**: The entire response schema is defined in Pydantic models. FastAPI auto-generates OpenAPI docs from these, so the API is self-documenting.
-2. **Async support**: VLM and OCR calls are I/O bound. Async handlers prevent blocking while waiting for model responses.
-3. **Built-in validation**: Request validation, file upload handling, and error responses come free.
-4. **Industry standard for ML APIs**: Most production ML services use FastAPI — reviewers will be immediately comfortable with the codebase.
+- 🚀 **Next Feature / Idea:** Developing an **Agentic Document Extractor**. This will involve exploring autonomous agent-based workflows for more complex document understanding, extraction, and reasoning tasks.
 
-## Key Documents
+---
 
-- [ARCHITECTURE.md](./ARCHITECTURE.md) — Answers to the 6 architecture questions
-- [RUBRIC.md](./RUBRIC.md) — Compliance scoring rules and methodology
+## 💡 Framework Choice
+
+**Why FastAPI over Flask, Django, or Express.js?**
+
+1. ⚡ **Native Pydantic integration**: The entire response schema is defined in Pydantic models. FastAPI auto-generates OpenAPI docs from these, making the API self-documenting.
+2. 🔄 **Async support**: VLM and OCR calls are I/O bound. Async handlers prevent blocking while waiting for model responses.
+3. 🛡️ **Built-in validation**: Request validation, file upload handling, and error responses come free.
+4. 📈 **Industry standard for ML APIs**: Most production ML services use FastAPI, ensuring immediate familiarity for reviewers and contributors.
+
+---
+
+## 📚 Key Documents
+
+- 📐 **[ARCHITECTURE.md](./ARCHITECTURE.md)** — Answers to the 6 architecture questions
+- 📏 **[RUBRIC.md](./RUBRIC.md)** — Compliance scoring rules and methodology
+
+<br>
+
+<p align="center">
+  Built with ❤️ using Python, FastAPI, Gemini, PaddleOCR, React, and Docker.
+</p>
+
+---
+
+## 📬 Contact
+
+<p align="center">
+  <a href="https://linkedin.com/in/mohammed-khalaf97"><img src="https://img.shields.io/badge/-LinkedIn-blue?style=flat&logo=linkedin&logoColor=white" alt="LinkedIn"/></a>
+  &nbsp;
+  <a href="https://github.com/mohammedkh97"><img src="https://img.shields.io/badge/-GitHub-000?style=flat&logo=github&logoColor=white" alt="GitHub"/></a>
+</p>
