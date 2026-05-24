@@ -78,3 +78,4 @@ backend/.env
 backend/assets/
 backend/scratch_test.py
 outputs/
+notes/
