@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="https://raw.githubusercontent.com/Mohammedkh97/DocMind-AI/main/backend/assets/logo.png" alt="DocMind AI Logo" width="150" onerror="this.style.display='none'"/>
+  <img src="backend/assets/assignment/logo.png" alt="DocMind AI Logo" width="150" onerror="this.style.display='none'"/>
   
   # 🧠 DocMind AI
 
