@@ -49,6 +49,7 @@ class OCRExtractor:
                 
                 # Prevent PaddleX from hanging on model source checks
                 os.environ["PADDLE_PDX_DISABLE_MODEL_SOURCE_CHECK"] = "True"
+                os.environ["DISABLE_MODEL_SOURCE_CHECK"] = "True"
 
                 from paddleocr import PaddleOCR
                 self._engine = PaddleOCR(
