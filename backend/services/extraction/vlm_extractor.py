@@ -79,40 +79,39 @@ class VLMExtractor:
             logger.error("classification_failed", error=str(e))
             return "unknown"
 
-    async def extract_invoice(self, image_bytes: bytes) -> tuple[dict[str, Any], bool, str]:
+    async def extract_invoice(self, image_bytes: bytes | None = None, raw_text: str | None = None) -> tuple[dict, bool, str]:
         """
-        Extract structured data from a commercial invoice image.
-
-        Returns:
-            Tuple of (extracted_data_dict, json_repair_was_needed)
+        Extract structured invoice data from an image OR raw text.
+        Returns: (structured_dict, json_repair_was_needed, markdown_text)
         """
-        return await self._extract_with_prompt(
-            image_bytes=image_bytes,
+        return await self._run_extraction_pipeline(
             prompt=INVOICE_EXTRACTION_PROMPT,
-            doc_type="invoice",
-        )
-
-    async def extract_packing_list(self, image_bytes: bytes) -> tuple[dict[str, Any], bool, str]:
-        """
-        Extract structured data from a packing list image.
-
-        Returns:
-            Tuple of (extracted_data_dict, json_repair_was_needed)
-        """
-        return await self._extract_with_prompt(
             image_bytes=image_bytes,
-            prompt=PACKING_LIST_EXTRACTION_PROMPT,
-            doc_type="packing_list",
+            raw_text=raw_text,
+            doc_type="invoice"
         )
 
-    async def _extract_with_prompt(
+    async def extract_packing_list(self, image_bytes: bytes | None = None, raw_text: str | None = None) -> tuple[dict, bool, str]:
+        """
+        Extract structured packing list data from an image OR raw text.
+        Returns: (structured_dict, json_repair_was_needed, markdown_text)
+        """
+        return await self._run_extraction_pipeline(
+            prompt=PACKING_LIST_EXTRACTION_PROMPT,
+            image_bytes=image_bytes,
+            raw_text=raw_text,
+            doc_type="packing_list"
+        )
+
+    async def _run_extraction_pipeline(
         self,
-        image_bytes: bytes,
         prompt: str,
         doc_type: str,
-    ) -> tuple[dict[str, Any], bool, str]:
+        image_bytes: bytes | None = None,
+        raw_text: str | None = None,
+    ) -> tuple[dict, bool, str]:
         """
-        Run extraction using VLM with retry and fallback logic.
+        Shared pipeline for extracting data from an image or raw text.using VLM with retry and fallback logic.
 
         Strategy:
         1. Try primary model (Gemini 2.5 Flash)
@@ -133,6 +132,7 @@ class VLMExtractor:
                 raw_response = await self._call_model(
                     prompt=prompt,
                     image_bytes=image_bytes,
+                    raw_text=raw_text,
                     model_name=model_name,
                 )
 
@@ -178,8 +178,9 @@ class VLMExtractor:
     async def _call_model(
         self,
         prompt: str,
-        image_bytes: bytes,
         model_name: str,
+        image_bytes: bytes | None = None,
+        raw_text: str | None = None,
     ) -> str:
         """
         Make a single API call to Gemini with image + text prompt.
@@ -187,17 +188,23 @@ class VLMExtractor:
         Uses retry with exponential backoff for transient failures.
         """
         try:
-            # Prepare image as inline Part
-            image_part = types.Part.from_bytes(
-                data=image_bytes,
-                mime_type="image/png",
-            )
+            contents = []
+            if image_bytes:
+                image_part = types.Part.from_bytes(
+                    data=image_bytes,
+                    mime_type="image/png",
+                )
+                contents.append(image_part)
+            if raw_text:
+                contents.append(f"RAW OCR TEXT:\n{raw_text}\n\n")
+            
+            contents.append(prompt)
 
             # Call Gemini
             response = await asyncio.to_thread(
                 self.client.models.generate_content,
                 model=model_name,
-                contents=[image_part, prompt],
+                contents=contents,
                 config=types.GenerateContentConfig(
                     temperature=self.settings.model_temperature,
                     max_output_tokens=8192,

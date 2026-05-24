@@ -34,13 +34,22 @@ class OCRExtractor:
     def __init__(self):
         self.settings = get_settings()
         self._engine = None
+        self._lock = asyncio.Lock()  # Ensure thread-safety for initialization and inference
 
     def _get_engine(self):
-        """Lazy-load PaddleOCR engine (heavy import, only load when needed)."""
+        """Lazy load the OCR engine to save memory and avoid slow startup."""
         if self._engine is None:
             try:
                 import os
+                # Prevent Paddle 3.x backend PIR segfaults (harmless on 2.x)
                 os.environ["FLAGS_use_mkldnn"] = "0"
+                os.environ["FLAGS_use_onednn"] = "0"
+                os.environ["PADDLE_PDX_ENABLE_MKLDNN_BYDEFAULT"] = "0"
+                os.environ["FLAGS_enable_pir_api"] = "0"
+                
+                # Prevent PaddleX from hanging on model source checks
+                os.environ["PADDLE_PDX_DISABLE_MODEL_SOURCE_CHECK"] = "True"
+
                 from paddleocr import PaddleOCR
                 self._engine = PaddleOCR(
                     use_angle_cls=True,
@@ -67,9 +76,10 @@ class OCRExtractor:
         """
         try:
             img_array = np.array(image)
-            result = await asyncio.to_thread(
-                self._run_ocr, img_array
-            )
+            async with self._lock:
+                result = await asyncio.to_thread(
+                    self._run_ocr, img_array
+                )
             return result
         except OCRExtractionError:
             raise

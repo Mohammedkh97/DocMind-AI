@@ -16,6 +16,7 @@ The orchestrator implements the fallback chain:
 import time
 import asyncio
 from typing import Any
+from PIL import Image
 
 from core.config import get_settings
 from core.logging import get_logger
@@ -157,6 +158,7 @@ class ExtractionOrchestrator:
     async def _extract_invoice(
         self,
         image_bytes: bytes,
+        pil_image: Image.Image,
         merger: ResultMerger,
         page_num: int,
     ) -> tuple[InvoiceData, bool, float, str]:
@@ -176,17 +178,33 @@ class ExtractionOrchestrator:
             return invoice, json_repair, time.time() - t0, raw_text
 
         except Exception as e:
-            logger.error(
-                "invoice_extraction_failed",
+            logger.warning(
+                "primary_invoice_extraction_failed_triggering_ocr_fallback",
                 page=page_num,
                 error=str(e),
             )
-            # Return empty invoice with warning rather than crashing
-            return InvoiceData(), True, 0.0, ""
+            try:
+                t_fallback = time.time()
+                # 1. Extract raw text with PaddleOCR
+                ocr_result = await self.ocr_extractor.extract_text(pil_image)
+                raw_ocr_text = ocr_result.get("full_text", "")
+
+                # 2. Parse text with Gemini VLM
+                raw_data, json_repair, raw_text = await self.vlm_extractor.extract_invoice(raw_text=raw_ocr_text)
+                invoice = merger.build_invoice(raw_data)
+                return invoice, json_repair, time.time() - t_fallback, raw_text
+            except Exception as fallback_e:
+                logger.error(
+                    "ocr_fallback_invoice_extraction_failed",
+                    page=page_num,
+                    error=str(fallback_e),
+                )
+                return InvoiceData(), True, 0.0, raw_ocr_text
 
     async def _extract_packing_list(
         self,
         image_bytes: bytes,
+        pil_image: Image.Image,
         merger: ResultMerger,
         page_num: int,
     ) -> tuple[PackingListData, bool, float, str]:
@@ -204,12 +222,28 @@ class ExtractionOrchestrator:
             return packing_list, json_repair, time.time() - t0, raw_text
 
         except Exception as e:
-            logger.error(
-                "packing_list_extraction_failed",
+            logger.warning(
+                "primary_packing_list_extraction_failed_triggering_ocr_fallback",
                 page=page_num,
                 error=str(e),
             )
-            return PackingListData(), True, 0.0, ""
+            try:
+                t_fallback = time.time()
+                # 1. Extract raw text with PaddleOCR
+                ocr_result = await self.ocr_extractor.extract_text(pil_image)
+                raw_ocr_text = ocr_result.get("full_text", "")
+
+                # 2. Parse text with Gemini VLM
+                raw_data, json_repair, raw_text = await self.vlm_extractor.extract_packing_list(raw_text=raw_ocr_text)
+                packing_list = merger.build_packing_list(raw_data)
+                return packing_list, json_repair, time.time() - t_fallback, raw_text
+            except Exception as fallback_e:
+                logger.error(
+                    "ocr_fallback_packing_list_extraction_failed",
+                    page=page_num,
+                    error=str(fallback_e),
+                )
+                return PackingListData(), True, 0.0, raw_ocr_text
 
     async def _process_page(self, page_info: dict) -> dict:
         """
@@ -272,13 +306,13 @@ class ExtractionOrchestrator:
 
         # Extract based on page type
         if page_type == "commercial_invoice":
-            inv, repair, ext_time, raw = await self._extract_invoice(image_bytes, merger, page_num)
+            inv, repair, ext_time, raw = await self._extract_invoice(image_bytes, page_info["enhanced_image"], merger, page_num)
             result["invoice_data"] = inv
             result["json_repair_applied"] = repair
             result["execution_times"]["vlm_extraction"] = ext_time
             result["raw_text"] = raw
         elif page_type == "packing_list":
-            pl, repair, ext_time, raw = await self._extract_packing_list(image_bytes, merger, page_num)
+            pl, repair, ext_time, raw = await self._extract_packing_list(image_bytes, page_info["enhanced_image"], merger, page_num)
             result["packing_list_data"] = pl
             result["json_repair_applied"] = repair
             result["execution_times"]["vlm_extraction"] = ext_time
@@ -289,13 +323,13 @@ class ExtractionOrchestrator:
             
             # Default: try invoice extraction on first page, packing list on second
             if page_num == 1:
-                inv, repair, ext_time, raw = await self._extract_invoice(image_bytes, merger, page_num)
+                inv, repair, ext_time, raw = await self._extract_invoice(image_bytes, page_info["enhanced_image"], merger, page_num)
                 result["invoice_data"] = inv
                 result["json_repair_applied"] = repair
                 result["execution_times"]["vlm_extraction"] = ext_time
                 result["raw_text"] = raw
             else:
-                pl, repair, ext_time, raw = await self._extract_packing_list(image_bytes, merger, page_num)
+                pl, repair, ext_time, raw = await self._extract_packing_list(image_bytes, page_info["enhanced_image"], merger, page_num)
                 result["packing_list_data"] = pl
                 result["json_repair_applied"] = repair
                 result["execution_times"]["vlm_extraction"] = ext_time

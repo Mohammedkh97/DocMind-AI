@@ -67,9 +67,8 @@ openai==1.109.1
 opencv-contrib-python==4.10.0.84
 orjson==3.11.9
 packaging==24.2
-paddleocr==3.5.0
-paddlepaddle
-paddlex==3.5.2
+paddleocr==2.9.1
+paddlepaddle==2.6.2
 pandas==2.2.3
 parso==0.8.7
 pillow==12.2.0
