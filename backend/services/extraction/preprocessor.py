@@ -24,6 +24,8 @@ from core.exceptions import FileProcessingError
 logger = get_logger("preprocessor")
 
 
+import asyncio
+
 class DocumentPreprocessor:
     """Converts PDFs to enhanced page images ready for extraction."""
 
@@ -33,73 +35,90 @@ class DocumentPreprocessor:
     async def process_pdf(self, file_bytes: bytes) -> list[dict]:
         """
         Convert a PDF to a list of page images with metadata.
-
-        Returns:
-            List of dicts with:
-            - 'page_number': 1-indexed page number
-            - 'original_image': PIL.Image (unmodified)
-            - 'enhanced_image': PIL.Image (preprocessed for better extraction)
-            - 'image_bytes': bytes of the enhanced image as PNG
-            - 'width': image width in pixels
-            - 'height': image height in pixels
+        Processes pages concurrently to maximize throughput.
         """
         try:
             doc = fitz.open(stream=file_bytes, filetype="pdf")
+            num_pages = len(doc)
+            doc.close()
         except Exception as e:
             raise FileProcessingError(
                 message=f"Failed to open PDF: {str(e)}",
                 details={"error_type": type(e).__name__}
             )
 
-        if len(doc) == 0:
+        if num_pages == 0:
             raise FileProcessingError(
                 message="PDF has no pages",
                 details={"page_count": 0}
             )
 
-        pages = []
-        for page_idx in range(len(doc)):
-            page_num = page_idx + 1
-            logger.info("processing_page", page=page_num, total_pages=len(doc))
+        # Run page processing in separate threads concurrently
+        tasks = [
+            asyncio.to_thread(self._process_single_page_sync, file_bytes, page_idx, num_pages)
+            for page_idx in range(num_pages)
+        ]
+        pages = await asyncio.gather(*tasks)
 
-            try:
-                page = doc[page_idx]
-                pix = page.get_pixmap(dpi=self.settings.pdf_render_dpi)
-
-                # Convert to PIL Image
-                img_bytes = pix.tobytes("png")
-                original_image = Image.open(io.BytesIO(img_bytes)).convert("RGB")
-
-                # Enhance image
-                if self.settings.enable_image_enhancement:
-                    enhanced_image = self._enhance_image(original_image)
-                else:
-                    enhanced_image = original_image.copy()
-
-                # Convert enhanced image to bytes for API calls
-                enhanced_bytes = io.BytesIO()
-                enhanced_image.save(enhanced_bytes, format="PNG")
-                enhanced_bytes = enhanced_bytes.getvalue()
-
-                pages.append({
-                    "page_number": page_num,
-                    "original_image": original_image,
-                    "enhanced_image": enhanced_image,
-                    "image_bytes": enhanced_bytes,
-                    "width": pix.width,
-                    "height": pix.height,
-                })
-
-            except Exception as e:
-                logger.error("page_processing_failed", page=page_num, error=str(e))
+        # Check for errors in the returned pages
+        for page in pages:
+            if "error" in page:
                 raise FileProcessingError(
-                    message=f"Failed to process page {page_num}: {str(e)}",
-                    details={"page": page_num, "error_type": type(e).__name__}
+                    message=page["error"],
+                    details=page.get("details", {})
                 )
 
-        doc.close()
+        # Sort pages by page number just in case
+        pages.sort(key=lambda x: x["page_number"])
+        
         logger.info("pdf_processing_complete", pages_processed=len(pages))
         return pages
+
+    def _process_single_page_sync(self, file_bytes: bytes, page_idx: int, total_pages: int) -> dict:
+        """Synchronous worker for processing a single page (rendering + enhancement)."""
+        page_num = page_idx + 1
+        logger.info("processing_page", page=page_num, total_pages=total_pages)
+
+        try:
+            # Open document per-thread to ensure PyMuPDF thread safety
+            doc = fitz.open(stream=file_bytes, filetype="pdf")
+            page = doc[page_idx]
+            pix = page.get_pixmap(dpi=self.settings.pdf_render_dpi)
+
+            # Convert to PIL Image
+            img_bytes = pix.tobytes("png")
+            original_image = Image.open(io.BytesIO(img_bytes)).convert("RGB")
+
+            # Enhance image (heavy CPU operation)
+            if self.settings.enable_image_enhancement:
+                enhanced_image = self._enhance_image(original_image)
+            else:
+                enhanced_image = original_image.copy()
+
+            # Convert enhanced image to bytes for API calls
+            enhanced_bytes = io.BytesIO()
+            enhanced_image.save(enhanced_bytes, format="PNG")
+            enhanced_bytes = enhanced_bytes.getvalue()
+            
+            width = pix.width
+            height = pix.height
+            doc.close()
+
+            return {
+                "page_number": page_num,
+                "original_image": original_image,
+                "enhanced_image": enhanced_image,
+                "image_bytes": enhanced_bytes,
+                "width": width,
+                "height": height,
+            }
+
+        except Exception as e:
+            logger.error("page_processing_failed", page=page_num, error=str(e))
+            return {
+                "error": f"Failed to process page {page_num}: {str(e)}",
+                "details": {"page": page_num, "error_type": type(e).__name__}
+            }
 
     def _enhance_image(self, image: Image.Image) -> Image.Image:
         """
