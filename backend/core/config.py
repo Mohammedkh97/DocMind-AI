@@ -23,6 +23,7 @@ class Settings(BaseSettings):
     # --- API Keys ---
     gemini_api_key: str = Field(..., description="Google Gemini API key")
     openai_api_key: str = Field(default="", description="OpenAI API key (optional fallback)")
+    landing_ai_api_key: str = Field(default="", description="Landing AI API key for ADE fallback")
 
     # --- Model Configuration ---
     primary_model: str = Field(

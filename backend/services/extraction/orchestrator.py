@@ -24,6 +24,7 @@ from schemas.extraction import ExtractionResponse, InvoiceData, PackingListData
 from services.extraction.preprocessor import DocumentPreprocessor
 from services.extraction.vlm_extractor import VLMExtractor
 from services.extraction.ocr_extractor import OCRExtractor
+from services.extraction.agentic_doc_extractor import AgenticDocumentExtractor
 from services.extraction.confidence_scorer import ConfidenceScorer
 from services.extraction.result_merger import ResultMerger
 from services.extraction.output_saver import save_pipeline_outputs
@@ -44,6 +45,7 @@ class ExtractionOrchestrator:
         self.preprocessor = DocumentPreprocessor()
         self.vlm_extractor = VLMExtractor()
         self.ocr_extractor = OCRExtractor()
+        self.agentic_extractor = AgenticDocumentExtractor()
 
     async def extract(self, file_bytes: bytes, filename: str = "document.pdf") -> ExtractionResponse:
         """
@@ -216,7 +218,7 @@ class ExtractionOrchestrator:
         page_num: int,
     ) -> tuple[InvoiceData, bool, float, str]:
         """
-        Extract invoice data with VLM, falling back to OCR if needed.
+        Extract invoice data with VLM, falling back to ADE if needed.
 
         Returns:
             Tuple of (InvoiceData, json_repair_was_needed)
@@ -231,13 +233,24 @@ class ExtractionOrchestrator:
             return invoice, json_repair, time.time() - t0, raw_text
 
         except Exception as e:
-            logger.error(
-                "invoice_extraction_failed",
+            logger.warning(
+                "primary_invoice_extraction_failed_triggering_agentic_fallback",
                 page=page_num,
                 error=str(e),
             )
-            # Return empty invoice with warning rather than crashing
-            return InvoiceData(), True, 0.0, ""
+            try:
+                t_fallback = time.time()
+                raw_data, json_repair, raw_text = await self.agentic_extractor.extract_invoice(image_bytes)
+                invoice = merger.build_invoice(raw_data)
+                return invoice, json_repair, time.time() - t_fallback, raw_text
+            except Exception as fallback_e:
+                logger.error(
+                    "agentic_fallback_invoice_extraction_failed",
+                    page=page_num,
+                    error=str(fallback_e),
+                )
+                # Return empty invoice with warning rather than crashing
+                return InvoiceData(), True, 0.0, ""
 
     async def _extract_packing_list(
         self,
@@ -246,7 +259,7 @@ class ExtractionOrchestrator:
         page_num: int,
     ) -> tuple[PackingListData, bool, float, str]:
         """
-        Extract packing list data with VLM, falling back to OCR if needed.
+        Extract packing list data with VLM, falling back to ADE if needed.
 
         Returns:
             Tuple of (PackingListData, json_repair_was_needed)
@@ -259,9 +272,20 @@ class ExtractionOrchestrator:
             return packing_list, json_repair, time.time() - t0, raw_text
 
         except Exception as e:
-            logger.error(
-                "packing_list_extraction_failed",
+            logger.warning(
+                "primary_packing_list_extraction_failed_triggering_agentic_fallback",
                 page=page_num,
                 error=str(e),
             )
-            return PackingListData(), True, 0.0, ""
+            try:
+                t_fallback = time.time()
+                raw_data, json_repair, raw_text = await self.agentic_extractor.extract_packing_list(image_bytes)
+                packing_list = merger.build_packing_list(raw_data)
+                return packing_list, json_repair, time.time() - t_fallback, raw_text
+            except Exception as fallback_e:
+                logger.error(
+                    "agentic_fallback_packing_list_extraction_failed",
+                    page=page_num,
+                    error=str(fallback_e),
+                )
+                return PackingListData(), True, 0.0, ""
